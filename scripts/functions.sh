@@ -32,14 +32,23 @@ CONFIGURE_DUNITER () {
 
 CONFIG_PERMISSIONS () {
 	# Protect senstive sub-routes to Duniter web admin interface, give access to choosen admin
-	ynh_permission_delete --permission "admin"
-	ynh_permission_create --permission "admin" --url "/webui" --additional_urls "/webmin" --allowed "$admin" --label "Administration" --show_tile=true
+	if ! ynh_permission_exists --permission="admin"; then
+		ynh_permission_create --permission "admin" --url "/webui" --additional_urls "/webmin" --allowed "$admin" --label "Administration" --show_tile=true
+	fi
+
+	if ! ynh_permission_exists --permission="bma"; then
+			ynh_permission_create --permission="bma" --url="/" --allowed="visitors" --show_tile="false" --protected="true"
+	fi
+
+
+#	if ! ynh_permission_exists --permission="ws2p"; then
+#		ynh_permission_create --permission="ws2p" --url="/ws2p" --allowed="visitors" --show_tile="false" --protected="true"
+#	fi
+	ynh_permission_delete --permission "ws2p"
 
 	# Remove deprecated permission system settings to remove their effects
-	if [ ! -z "$(ynh_app_setting_get --app=$app --key=protected_uris)" ]; then
-		ynh_app_setting_delete --app=$app --key=protected_uris
-		ynh_app_setting_delete --app=$app --key=unprotected_uris
-		ynh_app_setting_delete --app=$app --key=redirected_urls
+	if ynh_legacy_permissions_exists; then
+		ynh_legacy_permissions_delete_all
 	fi
 }
 
@@ -53,7 +62,7 @@ CONFIG_NGINX () {
 
 REMOVE_DUNITER () {
 	# Stop duniter daemon
-        systemctl stop duniter
+	systemctl stop duniter
 
 	# Remove Duniter package
 	dpkg -r duniter
